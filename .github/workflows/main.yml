@@ -1,0 +1,52 @@
+name: RDP Setup with Blacksmith
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  setup-rdp:
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    timeout-minutes: 60
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install RDP Server
+      run: |
+        sudo apt update
+        sudo apt install -y ubuntu-desktop-minimal
+        sudo apt install -y xrdp
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp
+        
+    - name: Configure RDP
+      run: |
+        # اضافه کردن کاربر با رمز عبور
+        sudo useradd -m -s /bin/bash rdpuser
+        echo 'rdpuser:password123' | sudo chpasswd
+        sudo usermod -aG sudo rdpuser
+        
+        # تنظیم RDP
+        sudo sed -i 's/3389/3389/g' /etc/xrdp/xrdp.ini
+        sudo ufw allow 3389
+        
+    - name: Start RDP Service
+      run: |
+        sudo systemctl restart xrdp
+        sudo systemctl status xrdp
+        
+    - name: Display Connection Info
+      run: |
+        echo "RDP Server is ready!"
+        echo "IP Address: $(curl -s ifconfig.me)"
+        echo "Port: 3389"
+        echo "Username: rdpuser"
+        echo "Password: password123"
+        
+    - name: Keep alive
+      run: |
+        echo "Keeping RDP session alive for 55 minutes..."
+        sleep 3300
