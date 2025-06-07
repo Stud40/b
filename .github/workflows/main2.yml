@@ -1,0 +1,71 @@
+name: RDP Setup
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  setup-rdp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Setup System
+      run: |
+        echo "Setting up the system..."
+        sudo apt update
+        
+    - name: Install Desktop Environment
+      run: |
+        echo "Installing desktop environment..."
+        sudo apt install -y ubuntu-desktop-minimal
+        
+    - name: Install RDP Server
+      run: |
+        echo "Installing XRDP..."
+        sudo apt install -y xrdp
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp
+        
+    - name: Configure RDP User
+      run: |
+        echo "Creating RDP user..."
+        sudo useradd -m -s /bin/bash rdpuser
+        echo 'rdpuser:SecurePass123!' | sudo chpasswd
+        sudo usermod -aG sudo rdpuser
+        
+    - name: Configure Firewall
+      run: |
+        echo "Configuring firewall..."
+        sudo ufw allow 3389/tcp
+        sudo ufw --force enable
+        
+    - name: Setup Desktop Environment
+      run: |
+        echo "Setting up XFCE desktop..."
+        sudo apt install -y xfce4 xfce4-goodies
+        sudo -u rdpuser bash -c 'echo "xfce4-session" > ~/.xsession'
+        
+    - name: Restart RDP Service
+      run: |
+        sudo systemctl restart xrdp
+        sudo systemctl status xrdp --no-pager
+        
+    - name: Display Connection Info
+      run: |
+        echo "=== RDP Server Ready ==="
+        echo "IP Address: $(curl -s ifconfig.me 2>/dev/null || echo 'Check runner IP')"
+        echo "Port: 3389"
+        echo "Username: rdpuser"
+        echo "Password: SecurePass123!"
+        echo "======================="
+        
+    - name: Keep Session Alive
+      run: |
+        echo "Keeping session alive for 6 hours..."
+        echo "Use this time to connect via RDP"
+        sleep 21600
